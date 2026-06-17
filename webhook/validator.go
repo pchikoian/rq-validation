@@ -40,3 +40,34 @@ func isMissing(list corev1.ResourceList, name corev1.ResourceName) bool {
 	q, ok := list[name]
 	return !ok || q.IsZero()
 }
+
+// validateQuota checks that every resource used by any container is covered by
+// at least one entry in quotaed. Quota entries may be bare ("cpu"), or prefixed
+// with "requests." or "limits." — any of the three forms is sufficient.
+func validateQuota(spec corev1.PodSpec, quotaed map[corev1.ResourceName]bool) []string {
+	var violations []string
+	all := append(spec.Containers, spec.InitContainers...)
+	for _, c := range all {
+		seen := map[corev1.ResourceName]bool{}
+		for res := range c.Resources.Requests {
+			if !seen[res] && !coveredByQuota(res, quotaed) {
+				violations = append(violations, fmt.Sprintf("container %q: resource %q is not covered by any ResourceQuota", c.Name, res))
+				seen[res] = true
+			}
+		}
+		for res := range c.Resources.Limits {
+			if !seen[res] && !coveredByQuota(res, quotaed) {
+				violations = append(violations, fmt.Sprintf("container %q: resource %q is not covered by any ResourceQuota", c.Name, res))
+				seen[res] = true
+			}
+		}
+	}
+	return violations
+}
+
+func coveredByQuota(res corev1.ResourceName, quotaed map[corev1.ResourceName]bool) bool {
+	name := string(res)
+	return quotaed[res] ||
+		quotaed[corev1.ResourceName("requests."+name)] ||
+		quotaed[corev1.ResourceName("limits."+name)]
+}

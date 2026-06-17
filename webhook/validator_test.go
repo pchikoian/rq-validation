@@ -95,6 +95,64 @@ func TestMultipleContainersOneBad(t *testing.T) {
 	}
 }
 
+// ── validateQuota tests ───────────────────────────────────────────────────────
+
+func quotaWith(names ...corev1.ResourceName) map[corev1.ResourceName]bool {
+	m := map[corev1.ResourceName]bool{}
+	for _, n := range names {
+		m[n] = true
+	}
+	return m
+}
+
+func TestQuotaAllCovered(t *testing.T) {
+	q := quotaWith("requests.cpu", "requests.memory", "limits.cpu", "limits.memory")
+	if v := validateQuota(spec(ctr("app", fullRes())), q); len(v) != 0 {
+		t.Errorf("expected no violations, got: %v", v)
+	}
+}
+
+func TestQuotaBareNameCoversRequestsAndLimits(t *testing.T) {
+	q := quotaWith("cpu", "memory")
+	if v := validateQuota(spec(ctr("app", fullRes())), q); len(v) != 0 {
+		t.Errorf("bare quota names should cover both requests and limits, got: %v", v)
+	}
+}
+
+func TestQuotaUncoveredResource(t *testing.T) {
+	q := quotaWith("requests.cpu", "requests.memory", "limits.cpu", "limits.memory")
+	res := fullRes()
+	res.Requests["nvidia.com/gpu"] = resource.MustParse("1")
+	res.Limits["nvidia.com/gpu"] = resource.MustParse("1")
+	v := validateQuota(spec(ctr("app", res)), q)
+	if len(v) != 1 || !strings.Contains(v[0], "nvidia.com/gpu") {
+		t.Errorf("expected 1 violation for nvidia.com/gpu, got: %v", v)
+	}
+}
+
+func TestQuotaDeduplicatesPerResource(t *testing.T) {
+	// cpu appears in both requests and limits; should produce only one violation
+	q := quotaWith("requests.memory", "limits.memory")
+	v := validateQuota(spec(ctr("app", fullRes())), q)
+	if len(v) != 1 || !strings.Contains(v[0], "cpu") {
+		t.Errorf("expected 1 violation for cpu (deduplicated), got: %v", v)
+	}
+}
+
+func TestQuotaInitContainerChecked(t *testing.T) {
+	q := quotaWith("requests.cpu", "requests.memory", "limits.cpu", "limits.memory")
+	s := corev1.PodSpec{
+		Containers:     []corev1.Container{ctr("app", fullRes())},
+		InitContainers: []corev1.Container{ctr("init", fullRes())},
+	}
+	s.InitContainers[0].Resources.Requests["nvidia.com/gpu"] = resource.MustParse("1")
+	s.InitContainers[0].Resources.Limits["nvidia.com/gpu"] = resource.MustParse("1")
+	v := validateQuota(s, q)
+	if len(v) != 1 || !strings.Contains(v[0], `"init"`) {
+		t.Errorf("expected 1 violation naming init container, got: %v", v)
+	}
+}
+
 func TestMissingOnlyMemoryLimit(t *testing.T) {
 	res := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{

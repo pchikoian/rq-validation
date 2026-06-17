@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"k8s-resource-webhook/webhook"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 func main() {
@@ -18,8 +20,19 @@ func main() {
 	certFile   := env("TLS_CERT",    "certs/tls.crt")
 	keyFile    := env("TLS_KEY",     "certs/tls.key")
 
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatalf("in-cluster config: %v", err)
+	}
+	kube, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Fatalf("kubernetes client: %v", err)
+	}
+
+	h := webhook.New(webhook.NewK8sQuotaFetcher(kube))
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/validate", webhook.Handle)
+	mux.Handle("/validate", h)
 
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {

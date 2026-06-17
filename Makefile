@@ -95,6 +95,9 @@ _kind-up:
 	  --cert=/app/certs/tls.crt --key=/app/certs/tls.key \
 	  --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	@$(KUBECTL) apply -f /app/manifests/serviceaccount.yaml
+	@$(KUBECTL) apply -f /app/manifests/clusterrole.yaml
+	@$(KUBECTL) apply -f /app/manifests/clusterrolebinding.yaml
+	@$(KUBECTL) apply -f /app/manifests/resource-quota.yaml
 	@$(KUBECTL) apply -f /app/manifests/deployment.yaml
 	@$(KUBECTL) apply -f /app/manifests/service.yaml
 	@CA_BUNDLE=$$(base64 -w0 /app/certs/tls.crt) && \
@@ -112,8 +115,9 @@ _test-integration:
 	$(KUBECTL) apply -f /app/test/skipped-deployment.yaml
 	@echo ""
 	@echo "--- DENIED (should fail) ---"
-	$(KUBECTL) apply -f /app/test/bad-deployment.yaml  && echo "ERROR: should have been denied" || echo "OK: denied as expected"
-	$(KUBECTL) apply -f /app/test/bad-statefulset.yaml && echo "ERROR: should have been denied" || echo "OK: denied as expected"
+	$(KUBECTL) apply -f /app/test/bad-deployment.yaml       && echo "ERROR: should have been denied" || echo "OK: denied as expected"
+	$(KUBECTL) apply -f /app/test/bad-statefulset.yaml      && echo "ERROR: should have been denied" || echo "OK: denied as expected"
+	$(KUBECTL) apply -f /app/test/bad-quota-deployment.yaml && echo "ERROR: should have been denied" || echo "OK: denied as expected"
 
 _test-clean:
 	$(KUBECTL) delete -f /app/test/ --ignore-not-found

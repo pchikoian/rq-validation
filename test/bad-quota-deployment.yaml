@@ -1,0 +1,28 @@
+# expect: DENIED — requests resource not declared in ResourceQuota
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-quota-deployment
+  namespace: test-enforced
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bad-quota
+  template:
+    metadata:
+      labels:
+        app: bad-quota
+    spec:
+      containers:
+        - name: app
+          image: nginx:alpine
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+              custom.example.com/fpga: "1"
+            limits:
+              cpu: 100m
+              memory: 128Mi
+              custom.example.com/fpga: "1"
