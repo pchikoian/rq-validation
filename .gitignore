@@ -1,0 +1,5 @@
+certs/
+tmp/
+vendor/
+*.test
+kubeconfig

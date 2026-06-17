@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource-webhook
+  namespace: webhook-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resource-webhook
+  template:
+    metadata:
+      labels:
+        app: resource-webhook
+    spec:
+      serviceAccountName: resource-webhook
+      containers:
+        - name: webhook
+          image: resource-webhook:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: webhook
+              containerPort: 8443
+            - name: health
+              containerPort: 8080
+          env:
+            - name: TLS_CERT
+              value: /certs/tls.crt
+            - name: TLS_KEY
+              value: /certs/tls.key
+            - name: PORT
+              value: "8443"
+            - name: HEALTH_PORT
+              value: "8080"
+          volumeMounts:
+            - name: tls
+              mountPath: /certs
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+      volumes:
+        - name: tls
+          secret:
+            secretName: webhook-tls

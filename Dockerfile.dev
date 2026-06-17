@@ -1,0 +1,26 @@
+FROM golang:1.24-alpine
+ENV GOTOOLCHAIN=auto
+
+RUN apk add --no-cache git make curl bash docker-cli openssl
+
+# Install air (hot reload)
+RUN go install github.com/air-verse/air@latest
+
+# Install kind — detect host arch at build time
+RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') && \
+    curl -fsSLo /usr/local/bin/kind \
+        "https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-${ARCH}" && \
+    chmod +x /usr/local/bin/kind
+
+# Install kubectl
+RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') && \
+    curl -fsSLo /usr/local/bin/kubectl \
+        "https://dl.k8s.io/release/v1.29.0/bin/linux/${ARCH}/kubectl" && \
+    chmod +x /usr/local/bin/kubectl
+
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+WORKDIR /app
+
+ENTRYPOINT ["/entrypoint.sh"]

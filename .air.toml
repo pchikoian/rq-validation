@@ -1,0 +1,13 @@
+[build]
+  cmd = "go build -o ./tmp/webhook ."
+  bin = "./tmp/webhook"
+  include_ext = ["go"]
+  exclude_dir  = ["tmp", "vendor", "manifests", "certs", "test"]
+  delay = 500
+
+[log]
+  time = true
+
+[color]
+  build = "yellow"
+  runner = "green"

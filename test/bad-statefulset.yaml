@@ -1,0 +1,21 @@
+# expect: DENIED — no resources block at all
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bad-statefulset
+  namespace: test-enforced
+spec:
+  serviceName: bad-sts
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bad-sts
+  template:
+    metadata:
+      labels:
+        app: bad-sts
+    spec:
+      containers:
+        - name: app
+          image: nginx:alpine
+          # no resources block

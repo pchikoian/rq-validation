@@ -1,0 +1,25 @@
+# expect: ALLOWED — namespace has no resource-validation label, webhook skips it
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-skipped
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skipped-deployment
+  namespace: test-skipped
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: skipped
+  template:
+    metadata:
+      labels:
+        app: skipped
+    spec:
+      containers:
+        - name: app
+          image: nginx:alpine
+          # no resources — allowed because namespace is not labeled

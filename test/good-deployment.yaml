@@ -1,0 +1,26 @@
+# expect: ALLOWED
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: good-deployment
+  namespace: test-enforced
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: good
+  template:
+    metadata:
+      labels:
+        app: good
+    spec:
+      containers:
+        - name: app
+          image: nginx:alpine
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi

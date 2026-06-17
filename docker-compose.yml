@@ -1,0 +1,23 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app                                    # live source mount
+      - /var/run/docker.sock:/var/run/docker.sock # kind cluster management
+      - kube-config:/root/.kube                   # kubeconfig persisted across restarts
+    ports:
+      - "8443:8443"   # webhook (TLS)
+      - "8080:8080"   # healthz
+    environment:
+      TLS_CERT: /app/certs/tls.crt
+      TLS_KEY: /app/certs/tls.key
+      PORT: "8443"
+      HEALTH_PORT: "8080"
+      KUBECONFIG: /root/.kube/config
+    stdin_open: true
+    tty: true
+
+volumes:
+  kube-config:
